@@ -2,9 +2,9 @@ from __future__ import annotations
 
 """Experimental CADe_SIMU text generation.
 
-The record shapes in this module are inferred from multiple public CADe_SIMU
-files. They are intentionally isolated from the parser until a generated file
-has been opened and saved successfully by the user's CADe_SIMU version.
+The power circuit record shapes have been validated by opening a generated file
+successfully in the user's CADe_SIMU version. Text annotation records are based
+on observed public CADe_SIMU files and remain separately testable/optional.
 """
 
 from dataclasses import dataclass
@@ -21,6 +21,7 @@ class PowerCircuitSpec:
     title: str = "Auralis Power"
     x: int = 69
     y: int = 51
+    include_explanations: bool = False
 
 
 def _ref(value: str) -> str:
@@ -30,13 +31,18 @@ def _ref(value: str) -> str:
     return f"-{value}"
 
 
+def _text(value: str) -> str:
+    value = value.strip()
+    if not value or any(char in value for char in "#*"):
+        raise ValueError("CADe_SIMU text must be non-empty and cannot contain # or *")
+    return value
+
+
 def _field(value: str, width: int) -> str:
     return value[:width].ljust(width)
 
 
 def _trailer(title: str) -> str:
-    # Page/configuration values are provisional and copied as format facts from
-    # a known-working family of CADe_SIMU files; human-readable metadata is ours.
     return (
         "#$$$*1*1*1*2*4*0*1*0*0*333*3234&&&"
         f"*{_field('', 11)}*{_field('', 11)}*{_field('', 11)}*{_field('', 11)}"
@@ -46,12 +52,27 @@ def _trailer(title: str) -> str:
     )
 
 
+def _text_record(index: int, value: str, x: int, y: int) -> str:
+    """Create a CADe_SIMU free-text record (observed type code 8)."""
+    value = _text(value)
+    x2 = x + max(8, min(60, len(value) + 4))
+    y2 = y + 3
+    return (
+        f"*{index}*8##########*0*0*0*0*0*0*0*0*"
+        f"{x}*{y}*{x2}*{y2}*0*0*0*0*0*0*0*0*0*0*0#{value}"
+    )
+
+
 def build_three_phase_power_circuit(spec: PowerCircuitSpec | None = None) -> str:
-    """Build an *experimental* power-only direct-starter CADe_SIMU document.
+    """Build a direct-starter power circuit for CADe_SIMU.
 
     Layout: 3-phase supply -> 3-pole motor protection -> power contactor ->
-    thermal overload -> 3-phase motor. No control circuit or contactor coil is
-    generated yet, so this milestone is for opening/layout validation first.
+    thermal overload -> 3-phase motor.
+
+    Set ``include_explanations=True`` to add a title and a short legend beside
+    the schematic using CADe_SIMU text records. The electrical power layout was
+    manually validated in CADe_SIMU on 2026-09-09; annotation rendering is kept
+    optional so it can be validated independently.
     """
     spec = spec or PowerCircuitSpec()
     x, y = spec.x, spec.y
@@ -87,10 +108,21 @@ def build_three_phase_power_circuit(spec: PowerCircuitSpec | None = None) -> str
             wire_index += 1
             circuit_id += 1
 
+    if spec.include_explanations:
+        tx = x + 45
+        labels = (
+            ("CUADRO DE FUERZA - ARRANQUE DIRECTO", tx, y - 12),
+            ("L1 L2 L3: alimentacion trifasica", tx, y),
+            (f"{spec.protection}: proteccion del motor", tx, y + 12),
+            (f"{spec.contactor}: contactor de potencia", tx, y + 36),
+            (f"{spec.overload}: rele termico", tx, y + 57),
+            (f"{spec.motor}: motor trifasico", tx, y + 78),
+        )
+        for value, label_x, label_y in labels:
+            records.append(_text_record(len(records), value, label_x, label_y))
+
     cad_text = "CADe_SIMU" + "#".join(records) + _trailer(spec.title)
 
-    # Internal structural guard: if our own lossless parser cannot round-trip
-    # what we generated, never hand the result to CADe_SIMU.
     parsed = CadDocument.parse(cad_text)
     if parsed.dumps() != cad_text:
         raise RuntimeError("generated CADe_SIMU text failed internal round-trip")
