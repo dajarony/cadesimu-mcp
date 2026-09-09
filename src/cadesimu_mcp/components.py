@@ -5,6 +5,7 @@ project files and must be verified with controlled files produced in CADe_SIMU.
 """
 
 TYPE_CODES: dict[int, str] = {
+    8: "free_text_label",
     1000: "three_phase_motor",
     2001: "three_pole_contactor",
     3004: "three_phase_supply",
