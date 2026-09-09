@@ -10,10 +10,27 @@ The first milestone is deliberately small: understand the CADe_SIMU `.cad` text 
 
 - [x] Repository created
 - [x] Public `.cad` examples identified for format study
+- [x] Lossless parser/inspector bootstrap
+- [x] Experimental power-only generator exposed as an MCP tool
 - [ ] Round-trip parser verified against several independent CADe_SIMU files
-- [ ] Component type-code catalogue validated
-- [ ] Minimal generated `.cad` opened successfully in CADe_SIMU
-- [ ] MCP tools for circuit generation
+- [ ] Component type-code catalogue validated with controlled saves
+- [ ] Generated `.cad` opened and re-saved successfully in the target CADe_SIMU version
+- [ ] Promote generation from experimental to validated
+
+The current generator produces this candidate power chain:
+
+```text
+L1/L2/L3 -> QF1 -> KM1 -> FR1 -> M1 (3~)
+```
+
+It intentionally omits the control circuit and contactor coil until the first generated file has been opened successfully in CADe_SIMU. The MCP response reports `validated_in_cadesimu: false` until that happens.
+
+## Current MCP tools
+
+- `inspect_cad_text` — inspect components, terminals and coordinates
+- `roundtrip_cad_text` — verify lossless parser reconstruction
+- `known_type_codes` — show provisional CADe_SIMU type codes
+- `generate_three_phase_power_circuit` — experimental power-circuit `.cad` generation
 
 ## Target architecture
 
