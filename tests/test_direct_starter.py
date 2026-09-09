@@ -35,6 +35,18 @@ def test_control_references_match_power_references() -> None:
     assert "-S7START" in refs
 
 
+def test_coil_is_emitted_before_self_hold_auxiliary_contact() -> None:
+    """CADe_SIMU momentary START depends on the observed device scan order."""
+    doc = CadDocument.parse(
+        build_direct_starter_with_control(DirectStarterSpec(include_explanations=False))
+    )
+    km1_records = [record for record in doc.records if record.reference == "-KM1"]
+
+    coil = next(record for record in km1_records if record.type_code == 9000)
+    auxiliary = next(record for record in km1_records if record.type_code == 7000)
+    assert coil.index < auxiliary.index
+
+
 def test_annotations_are_aligned_with_control_component_rows() -> None:
     doc = CadDocument.parse(build_direct_starter_with_control(DirectStarterSpec()))
     texts = [record for record in doc.records if record.type_code == int(CadType.FREE_TEXT)]
