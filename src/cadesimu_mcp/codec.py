@@ -6,7 +6,7 @@ from typing import Iterable
 
 HEADER = "CADe_SIMU"
 TRAILER_MARKER = "#$$$"
-_RECORD_HEADER = re.compile(r"(?:^|#)(\*(\d+)\*(\d+)#)")
+_RECORD_HEADER = re.compile(r"(\*(\d+)\*(\d+)#)")
 
 
 class CadFormatError(ValueError):
@@ -27,6 +27,7 @@ class CadRecord:
     index: int
     type_code: int
     raw: str
+    separator_before: str = ""
 
     @property
     def data(self) -> str:
@@ -105,16 +106,27 @@ class CadDocument:
         records: list[CadRecord] = []
         for pos, match in enumerate(matches):
             start = match.start(1)
-            end = matches[pos + 1].start(1) - 1 if pos + 1 < len(matches) else len(body)
+            separator_before = "#" if start > 0 and body[start - 1] == "#" else ""
+            if pos + 1 < len(matches):
+                next_start = matches[pos + 1].start(1)
+                next_separator = 1 if next_start > 0 and body[next_start - 1] == "#" else 0
+                end = next_start - next_separator
+            else:
+                end = len(body)
             raw = body[start:end]
-            records.append(CadRecord(index=int(match.group(2)), type_code=int(match.group(3)), raw=raw))
+            records.append(
+                CadRecord(
+                    index=int(match.group(2)),
+                    type_code=int(match.group(3)),
+                    raw=raw,
+                    separator_before=separator_before,
+                )
+            )
 
         return cls(records=tuple(records), trailer=trailer)
 
     def dumps(self) -> str:
-        if not self.records:
-            return HEADER + self.trailer
-        body = "#".join(record.raw for record in self.records)
+        body = "".join(record.separator_before + record.raw for record in self.records)
         return HEADER + body + self.trailer
 
     def summary(self) -> list[dict[str, object]]:
