@@ -8,6 +8,7 @@ Unit tests can prove that the generator is internally consistent, but CADe_SIMU 
 - record type and reference checks
 - coordinate checks
 - self-hold topology record checks
+- CADe_SIMU control-device scan-order check
 - annotation placement checks
 - `compileall`
 - Ruff in CI
@@ -26,23 +27,34 @@ Free-text labels rendered in CADe_SIMU. The generator now aligns labels with the
 
 The combined direct-starter file opened and rendered QF1 auxiliary, FR1 auxiliary, STOP S0, START S1, KM1 auxiliary self-hold contact and KM1 coil.
 
-### Gate D — control simulation — PENDING
+### Gate D — control simulation — FIX CANDIDATE PENDING MANUAL RETEST
 
-Expected behaviour:
+Observed on 2026-09-09 with the previous generator:
 
-1. Press START S1 with a normal click only; do not drag the mouse.
-2. S1 must return to its rest/open state when the click is released.
-3. KM1 coil energizes.
-4. KM1 main power contacts close and M1 is supplied.
-5. KM1 auxiliary 13-14 closes and maintains the coil after S1 returns to rest.
-6. Press STOP S0 with a normal click only; do not drag the mouse.
-7. KM1 coil de-energizes, the self-hold opens and the motor power contacts open.
-8. Releasing S0 must not restart the motor.
-9. Triggering the overload contact must also interrupt the control path.
+- QF1 closes correctly.
+- Holding START S1 energizes KM1, closes the KM1 auxiliary contact, closes the three power contacts and runs M1.
+- A normal momentary START pulse does **not** remain latched; the motor stops when START returns to rest.
+- Therefore the previous build does not pass Gate D.
 
-Important CADe_SIMU interaction detail: dragging the mouse while holding a momentary pushbutton intentionally leaves that pushbutton actuated. That is useful for tests but invalidates the START/STOP self-hold check because START can remain artificially closed. If this happens, reset the simulation or return the pushbutton to its rest state before retesting.
+Root-cause hypothesis from comparison with a known-working CADe_SIMU direct-starter file: CADe_SIMU is sensitive to the order in which control records are emitted/evaluated. The previous generator emitted the KM1 auxiliary contact before the KM1 coil. The reference file emits the coil first and the self-hold auxiliary later, after the main control wiring.
 
-Do not mark the direct-starter generator fully validated until Gate D passes in CADe_SIMU with momentary START/STOP operation.
+Fix candidate:
+
+- emit QF1 aux -> FR1 aux -> STOP -> START -> KM1 coil -> control supply/return;
+- emit the main path wiring;
+- emit KM1 auxiliary contact;
+- emit the self-hold branch wiring;
+- keep a regression test requiring the KM1 coil record to precede the KM1 auxiliary record.
+
+Retest procedure:
+
+1. Run simulation and close QF1.
+2. Give START S1 one normal momentary press; do not drag-lock it.
+3. After S1 returns to rest, KM1 must remain energized through KM1 aux 13-14 and M1 must keep running.
+4. Give STOP S0 one normal momentary press; after S0 returns to rest, KM1 and M1 must remain off.
+5. Triggering the overload contact must also interrupt the control path.
+
+Do not mark the direct-starter generator fully validated until this retest passes in CADe_SIMU.
 
 ### Gate E — PE/earth — PENDING
 
