@@ -34,6 +34,28 @@ def test_generated_references_and_positions() -> None:
     assert (doc.records[4].x, doc.records[4].y) == (90, 138)
 
 
+def test_explanatory_labels_are_optional_and_roundtrip() -> None:
+    cad_text = build_three_phase_power_circuit(
+        PowerCircuitSpec(
+            protection="QF1",
+            contactor="KM1",
+            overload="FR1",
+            motor="M1",
+            include_explanations=True,
+        )
+    )
+    doc = CadDocument.parse(cad_text)
+
+    assert doc.dumps() == cad_text
+    assert len(doc.records) == 23
+    assert [record.type_code for record in doc.records[-6:]] == [8] * 6
+    assert "CUADRO DE FUERZA - ARRANQUE DIRECTO" in cad_text
+    assert "QF1: proteccion del motor" in cad_text
+    assert "KM1: contactor de potencia" in cad_text
+    assert "FR1: rele termico" in cad_text
+    assert "M1: motor trifasico" in cad_text
+
+
 def test_references_reject_delimiters() -> None:
     try:
         build_three_phase_power_circuit(PowerCircuitSpec(contactor="K#1"))
