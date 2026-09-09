@@ -4,6 +4,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .codec import CadDocument
 from .components import TYPE_CODES, type_name
+from .generator import PowerCircuitSpec, build_three_phase_power_circuit
 
 mcp = FastMCP("cadesimu")
 
@@ -40,6 +41,37 @@ def roundtrip_cad_text(cad_text: str) -> dict[str, object]:
 def known_type_codes() -> dict[str, str]:
     """Return provisional CADe_SIMU component type-code mappings."""
     return {str(code): name for code, name in sorted(TYPE_CODES.items())}
+
+
+@mcp.tool()
+def generate_three_phase_power_circuit(
+    protection: str = "Q1",
+    contactor: str = "K1",
+    overload: str = "F1",
+    motor: str = "M1",
+    title: str = "Auralis Power",
+) -> dict[str, object]:
+    """Generate an experimental CADe_SIMU power-only direct-starter document.
+
+    This tool is deliberately marked experimental until a generated file has
+    been opened and re-saved successfully by the target CADe_SIMU version.
+    """
+    spec = PowerCircuitSpec(
+        protection=protection,
+        contactor=contactor,
+        overload=overload,
+        motor=motor,
+        title=title,
+    )
+    cad_text = build_three_phase_power_circuit(spec)
+    doc = CadDocument.parse(cad_text)
+    return {
+        "experimental": True,
+        "validated_in_cadesimu": False,
+        "record_count": len(doc.records),
+        "cad_text": cad_text,
+        "next_step": "Save cad_text as a .cad file and open it in CADe_SIMU for validation.",
+    }
 
 
 def main() -> None:
