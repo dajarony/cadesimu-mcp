@@ -50,11 +50,13 @@ def generate_three_phase_power_circuit(
     overload: str = "F1",
     motor: str = "M1",
     title: str = "Auralis Power",
+    include_explanations: bool = True,
 ) -> dict[str, object]:
-    """Generate an experimental CADe_SIMU power-only direct-starter document.
+    """Generate a CADe_SIMU direct-starter power circuit.
 
-    This tool is deliberately marked experimental until a generated file has
-    been opened and re-saved successfully by the target CADe_SIMU version.
+    The electrical power layout has been manually validated in CADe_SIMU.
+    Optional explanatory text labels use the observed CADe_SIMU text-record
+    format and are independently testable.
     """
     spec = PowerCircuitSpec(
         protection=protection,
@@ -62,15 +64,22 @@ def generate_three_phase_power_circuit(
         overload=overload,
         motor=motor,
         title=title,
+        include_explanations=include_explanations,
     )
     cad_text = build_three_phase_power_circuit(spec)
     doc = CadDocument.parse(cad_text)
     return {
-        "experimental": True,
-        "validated_in_cadesimu": False,
+        "power_layout_validated_in_cadesimu": True,
+        "annotations_requested": include_explanations,
+        "annotations_validation_pending": include_explanations,
         "record_count": len(doc.records),
         "cad_text": cad_text,
-        "next_step": "Save cad_text as a .cad file and open it in CADe_SIMU for validation.",
+        "next_step": (
+            "Save cad_text as a .cad file and open it in CADe_SIMU; if labels render correctly, "
+            "annotation support can be marked validated."
+            if include_explanations
+            else "Save cad_text as a .cad file and open it in CADe_SIMU."
+        ),
     }
 
 
