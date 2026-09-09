@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
-from typing import Iterable
+from collections.abc import Iterable
+from dataclasses import dataclass
 
 HEADER = "CADe_SIMU"
 TRAILER_MARKER = "#$$$"
@@ -91,7 +91,7 @@ class CadDocument:
     trailer: str
 
     @classmethod
-    def parse(cls, text: str) -> "CadDocument":
+    def parse(cls, text: str) -> CadDocument:
         if not text.startswith(HEADER):
             raise CadFormatError("missing CADe_SIMU header")
 
