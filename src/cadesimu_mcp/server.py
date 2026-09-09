@@ -4,7 +4,12 @@ from mcp.server.fastmcp import FastMCP
 
 from .codec import CadDocument
 from .components import TYPE_CODES, type_name
-from .generator import PowerCircuitSpec, build_three_phase_power_circuit
+from .generator import (
+    DirectStarterSpec,
+    PowerCircuitSpec,
+    build_direct_starter_with_control,
+    build_three_phase_power_circuit,
+)
 
 mcp = FastMCP("cadesimu")
 
@@ -52,12 +57,7 @@ def generate_three_phase_power_circuit(
     title: str = "Auralis Power",
     include_explanations: bool = True,
 ) -> dict[str, object]:
-    """Generate a CADe_SIMU direct-starter power circuit.
-
-    The electrical power layout has been manually validated in CADe_SIMU.
-    Optional explanatory text labels use the observed CADe_SIMU text-record
-    format and are independently testable.
-    """
+    """Generate the manually validated CADe_SIMU power side of a direct starter."""
     spec = PowerCircuitSpec(
         protection=protection,
         contactor=contactor,
@@ -70,16 +70,47 @@ def generate_three_phase_power_circuit(
     doc = CadDocument.parse(cad_text)
     return {
         "power_layout_validated_in_cadesimu": True,
-        "annotations_requested": include_explanations,
-        "annotations_validation_pending": include_explanations,
+        "annotation_records_validated_in_cadesimu": True,
         "record_count": len(doc.records),
         "cad_text": cad_text,
-        "next_step": (
-            "Save cad_text as a .cad file and open it in CADe_SIMU; if labels render correctly, "
-            "annotation support can be marked validated."
-            if include_explanations
-            else "Save cad_text as a .cad file and open it in CADe_SIMU."
-        ),
+    }
+
+
+@mcp.tool()
+def generate_direct_starter_with_control(
+    protection: str = "QF1",
+    contactor: str = "KM1",
+    overload: str = "FR1",
+    motor: str = "M1",
+    stop_button: str = "S0",
+    start_button: str = "S1",
+    title: str = "Auralis Direct Starter",
+    include_explanations: bool = True,
+) -> dict[str, object]:
+    """Generate power + STOP/START control + KM1 self-hold.
+
+    The power and annotation record families are already validated in the target
+    CADe_SIMU version. The combined control layout is the next validation step.
+    """
+    spec = DirectStarterSpec(
+        protection=protection,
+        contactor=contactor,
+        overload=overload,
+        motor=motor,
+        stop_button=stop_button,
+        start_button=start_button,
+        title=title,
+        include_explanations=include_explanations,
+    )
+    cad_text = build_direct_starter_with_control(spec)
+    doc = CadDocument.parse(cad_text)
+    return {
+        "power_layout_validated_in_cadesimu": True,
+        "annotation_records_validated_in_cadesimu": True,
+        "control_layout_validation_pending": True,
+        "record_count": len(doc.records),
+        "cad_text": cad_text,
+        "next_step": "Open the generated .cad in CADe_SIMU and test START/STOP simulation.",
     }
 
 
