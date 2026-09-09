@@ -1,6 +1,5 @@
 from cadesimu_mcp.codec import CadDocument, CadFormatError
 
-
 SAMPLE = (
     "CADe_SIMU"
     "*0*9999#-X##A#B#######*0*0*0*0*0*0*0*0*10*20*0*0"
