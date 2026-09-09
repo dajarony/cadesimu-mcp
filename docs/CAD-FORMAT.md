@@ -45,10 +45,11 @@ For a `4000` wire record, `(x, y)` and `(x2, y2)` correspond to the segment endp
 
 ## Provisional type-code observations
 
-These names are hypotheses until validated by creating one isolated component at a time in CADe_SIMU and comparing the resulting files.
+The direct-starter power-chain generator was opened successfully in the user's CADe_SIMU installation on 2026-09-09. Individual component schemas still need isolated-file validation before the map can be treated as a full specification.
 
 | Code | Provisional meaning |
 |---:|---|
+| 8 | free text / annotation label |
 | 1000 | three-phase motor |
 | 2001 | three-pole contactor |
 | 3004 | three-phase supply |
@@ -64,6 +65,8 @@ These names are hypotheses until validated by creating one isolated component at
 | 8018 | overload auxiliary contact |
 | 9000 | contactor coil |
 | 9008 | indicator lamp |
+
+Observed type `8` records end with a hash followed by display text, for example `#FUERZA` or `#MANDO`. The generator now supports optional explanatory labels using this record shape; rendering is awaiting the same manual CADe_SIMU validation used for the power layout.
 
 ## Evidence used for reconnaissance
 
@@ -82,7 +85,8 @@ One especially useful file is `cadesimu-motor_arranque-indirecto.cad` in the fir
 3. Repeat for fuse, breaker/guardamotor, contactor, thermal overload and motor.
 4. Repeat for wire and junction geometry.
 5. Verify parser round-trip against every captured file.
-6. Only after the codes and field positions are confirmed, implement a generator.
-7. Open a generated file in CADe_SIMU and simulate a minimal circuit.
+6. Validate generated explanatory text labels in CADe_SIMU.
+7. Build and validate a complete direct-starter control circuit (STOP, START, seal-in auxiliary contact and KM1 coil).
+8. Add PE/earth handling after its exact symbol/connection representation is confirmed.
 
-The generator must not guess unknown fields. Until a component schema is validated, the MCP should inspect/preserve it rather than synthesize it.
+Unknown fields are preserved rather than guessed. Components that have not been validated should remain inspect/preserve-first until their schema is confirmed.
