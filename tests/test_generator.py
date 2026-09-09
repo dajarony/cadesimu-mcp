@@ -1,5 +1,10 @@
 from cadesimu_mcp.codec import CadDocument
-from cadesimu_mcp.generator import PowerCircuitSpec, build_three_phase_power_circuit
+from cadesimu_mcp.generator import (
+    DirectStarterSpec,
+    PowerCircuitSpec,
+    build_direct_starter_with_control,
+    build_three_phase_power_circuit,
+)
 
 
 def test_generated_power_circuit_roundtrips() -> None:
@@ -34,7 +39,7 @@ def test_generated_references_and_positions() -> None:
     assert (doc.records[4].x, doc.records[4].y) == (90, 138)
 
 
-def test_explanatory_labels_are_optional_and_roundtrip() -> None:
+def test_explanatory_labels_do_not_gain_visible_hashes() -> None:
     cad_text = build_three_phase_power_circuit(
         PowerCircuitSpec(
             protection="QF1",
@@ -48,12 +53,29 @@ def test_explanatory_labels_are_optional_and_roundtrip() -> None:
 
     assert doc.dumps() == cad_text
     assert len(doc.records) == 23
-    assert [record.type_code for record in doc.records[-6:]] == [8] * 6
-    assert "CUADRO DE FUERZA - ARRANQUE DIRECTO" in cad_text
+    assert [record.type_code for record in doc.records[5:11]] == [8] * 6
+    assert "ARRANQUE DIRECTO*6*8" in cad_text
+    assert "ARRANQUE DIRECTO#*6*8" not in cad_text
     assert "QF1: proteccion del motor" in cad_text
-    assert "KM1: contactor de potencia" in cad_text
-    assert "FR1: rele termico" in cad_text
-    assert "M1: motor trifasico" in cad_text
+
+
+def test_full_direct_starter_contains_control_and_self_hold() -> None:
+    cad_text = build_direct_starter_with_control(DirectStarterSpec())
+    doc = CadDocument.parse(cad_text)
+    codes = [record.type_code for record in doc.records]
+
+    assert doc.dumps() == cad_text
+    assert 3000 in codes
+    assert 3001 in codes
+    assert 6010 in codes
+    assert 8018 in codes
+    assert 8001 in codes
+    assert 8000 in codes
+    assert 7000 in codes
+    assert 9000 in codes
+    assert codes.count(4001) >= 3
+    assert "S0: pulsador PARO normalmente cerrado" in cad_text
+    assert "S1: pulsador MARCHA normalmente abierto" in cad_text
 
 
 def test_references_reject_delimiters() -> None:
