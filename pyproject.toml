@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cadesimu-mcp"
-version = "0.1.0"
-description = "Experimental CADe_SIMU .cad parser and MCP bridge"
+version = "0.2.0"
+description = "CADe_SIMU .cad parser, circuit generator and MCP bridge"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["mcp>=1.0.0"]
@@ -25,3 +25,6 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

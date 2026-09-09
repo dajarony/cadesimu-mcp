@@ -6,7 +6,9 @@ from typing import Iterable
 
 HEADER = "CADe_SIMU"
 TRAILER_MARKER = "#$$$"
-_RECORD_HEADER = re.compile(r"(\*(\d+)\*(\d+)#)")
+_HEADER_AT_START = re.compile(r"\*(\d+)\*(\d+)#")
+_HEADER_AFTER_SEPARATOR = re.compile(r"#\*(\d+)\*(\d+)#")
+_HEADER_WITHOUT_SEPARATOR = re.compile(r"\*(\d+)\*(\d+)#")
 
 
 class CadFormatError(ValueError):
@@ -24,6 +26,8 @@ def _to_int(value: str | None) -> int | None:
 
 @dataclass(frozen=True, slots=True)
 class CadRecord:
+    """One raw CADe_SIMU record plus lossless separator metadata."""
+
     index: int
     type_code: int
     raw: str
@@ -38,13 +42,11 @@ class CadRecord:
 
     @property
     def hash_fields(self) -> tuple[str, ...]:
-        """Fields before the first star-delimited numeric block."""
         head = self.data.split("*", 1)[0]
         return tuple(head.split("#"))
 
     @property
     def star_fields(self) -> tuple[str, ...]:
-        """Star-delimited fields after the hash-labelled block."""
         parts = self.data.split("*", 1)
         if len(parts) == 1:
             return ()
@@ -53,7 +55,7 @@ class CadRecord:
     @property
     def reference(self) -> str | None:
         fields = self.hash_fields
-        return fields[0] or None if fields else None
+        return (fields[0] or None) if fields else None
 
     @property
     def terminals(self) -> tuple[str, ...]:
@@ -83,6 +85,8 @@ class CadRecord:
 
 @dataclass(frozen=True, slots=True)
 class CadDocument:
+    """Lossless parsed CADe_SIMU document."""
+
     records: tuple[CadRecord, ...]
     trailer: str
 
@@ -99,31 +103,81 @@ class CadDocument:
             body = text[len(HEADER) : trailer_at]
             trailer = text[trailer_at:]
 
-        matches = list(_RECORD_HEADER.finditer(body))
-        if body and not matches:
-            raise CadFormatError("no component records found")
+        if not body:
+            return cls(records=(), trailer=trailer)
+
+        first = _HEADER_AT_START.match(body)
+        if not first:
+            raise CadFormatError("first component record does not start after CADe_SIMU header")
 
         records: list[CadRecord] = []
-        for pos, match in enumerate(matches):
-            start = match.start(1)
-            separator_before = "#" if start > 0 and body[start - 1] == "#" else ""
-            if pos + 1 < len(matches):
-                next_start = matches[pos + 1].start(1)
-                next_separator = 1 if next_start > 0 and body[next_start - 1] == "#" else 0
-                end = next_start - next_separator
+        current_start = 0
+        current_index = int(first.group(1))
+        current_type = int(first.group(2))
+        separator_before = ""
+
+        while True:
+            if current_type == 8:
+                next_match = cls._next_after_text(body, current_start)
+                if next_match is None:
+                    next_start = len(body)
+                    next_separator = ""
+                else:
+                    next_start = next_match.start()
+                    next_separator = ""
             else:
-                end = len(body)
-            raw = body[start:end]
+                next_match = _HEADER_AFTER_SEPARATOR.search(body, first.end())
+                if next_match is None:
+                    next_start = len(body)
+                    next_separator = ""
+                else:
+                    next_start = next_match.start()
+                    next_separator = "#"
+
+            raw = body[current_start:next_start]
             records.append(
                 CadRecord(
-                    index=int(match.group(2)),
-                    type_code=int(match.group(3)),
+                    index=current_index,
+                    type_code=current_type,
                     raw=raw,
                     separator_before=separator_before,
                 )
             )
 
+            if next_match is None:
+                break
+
+            if next_separator == "#":
+                header_start = next_match.start() + 1
+                current_index = int(next_match.group(1))
+                current_type = int(next_match.group(2))
+            else:
+                header_start = next_match.start()
+                current_index = int(next_match.group(1))
+                current_type = int(next_match.group(2))
+
+            current_start = header_start
+            separator_before = next_separator
+            first = _HEADER_AT_START.match(body, current_start)
+            if first is None:
+                raise CadFormatError("malformed component record header")
+
         return cls(records=tuple(records), trailer=trailer)
+
+    @staticmethod
+    def _next_after_text(body: str, record_start: int) -> re.Match[str] | None:
+        """Locate the record immediately following a type-8 free-text object."""
+        header = _HEADER_AT_START.match(body, record_start)
+        if header is None:
+            return None
+
+        numeric_start = body.find("*", header.end())
+        if numeric_start < 0:
+            return None
+        payload_start = body.find("#", numeric_start)
+        if payload_start < 0:
+            return None
+        return _HEADER_WITHOUT_SEPARATOR.search(body, payload_start + 1)
 
     def dumps(self) -> str:
         body = "".join(record.separator_before + record.raw for record in self.records)

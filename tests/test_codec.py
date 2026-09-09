@@ -8,11 +8,24 @@ SAMPLE = (
     "#$$$*fixture"
 )
 
+TEXT_SAMPLE = (
+    "CADe_SIMU"
+    "*0*8##########*0*0*0*0*0*0*0*0*10*20*30*23*0*0*0*0*0*0*0*0*0*0*0#LABEL"
+    "*1*4000##########*0*0*0*0*0*0*0*0*10*20*10*40"
+    "#$$$*fixture"
+)
+
 
 def test_roundtrip_is_exact() -> None:
     doc = CadDocument.parse(SAMPLE)
     assert doc.dumps() == SAMPLE
     assert len(doc.records) == 2
+
+
+def test_roundtrip_preserves_no_separator_after_text_record() -> None:
+    doc = CadDocument.parse(TEXT_SAMPLE)
+    assert doc.dumps() == TEXT_SAMPLE
+    assert doc.records[1].separator_before == ""
 
 
 def test_extracts_basic_record_metadata() -> None:
