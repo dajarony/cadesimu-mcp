@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from .codec import CadDocument
 from .components import TYPE_CODES, type_name
@@ -12,7 +12,7 @@ from .generator import (
 )
 from .validation import VALIDATION_STATUS
 
-mcp = FastMCP("cadesimu")
+mcp = MCPServer("cadesimu")
 
 
 @mcp.tool()
