@@ -24,6 +24,71 @@ def _to_int(value: str | None) -> int | None:
         return None
 
 
+def _split_body_and_trailer(text: str) -> tuple[str, str]:
+    if not text.startswith(HEADER):
+        raise CadFormatError("missing CADe_SIMU header")
+
+    trailer_at = text.find(TRAILER_MARKER, len(HEADER))
+    if trailer_at < 0:
+        return text[len(HEADER) :], ""
+    return text[len(HEADER) : trailer_at], text[trailer_at:]
+
+
+def _require_header(body: str, position: int) -> re.Match[str]:
+    header = _HEADER_AT_START.match(body, position)
+    if header is None:
+        raise CadFormatError("malformed component record header")
+    return header
+
+
+@dataclass(frozen=True, slots=True)
+class _NextBoundary:
+    raw_end: int
+    header_start: int
+    separator: str
+
+
+def _next_after_text(body: str, record_start: int) -> re.Match[str] | None:
+    """Locate the record immediately following a type-8 free-text object."""
+    header = _HEADER_AT_START.match(body, record_start)
+    if header is None:
+        return None
+
+    numeric_start = body.find("*", header.end())
+    if numeric_start < 0:
+        return None
+    payload_start = body.find("#", numeric_start)
+    if payload_start < 0:
+        return None
+    return _HEADER_WITHOUT_SEPARATOR.search(body, payload_start + 1)
+
+
+def _next_boundary(
+    body: str,
+    record_start: int,
+    type_code: int,
+    header_end: int,
+) -> _NextBoundary | None:
+    if type_code == 8:
+        next_match = _next_after_text(body, record_start)
+        if next_match is None:
+            return None
+        return _NextBoundary(
+            raw_end=next_match.start(),
+            header_start=next_match.start(),
+            separator="",
+        )
+
+    next_match = _HEADER_AFTER_SEPARATOR.search(body, header_end)
+    if next_match is None:
+        return None
+    return _NextBoundary(
+        raw_end=next_match.start(),
+        header_start=next_match.start() + 1,
+        separator="#",
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CadRecord:
     """One raw CADe_SIMU record plus lossless separator metadata."""
@@ -92,92 +157,36 @@ class CadDocument:
 
     @classmethod
     def parse(cls, text: str) -> CadDocument:
-        if not text.startswith(HEADER):
-            raise CadFormatError("missing CADe_SIMU header")
-
-        trailer_at = text.find(TRAILER_MARKER, len(HEADER))
-        if trailer_at < 0:
-            body = text[len(HEADER) :]
-            trailer = ""
-        else:
-            body = text[len(HEADER) : trailer_at]
-            trailer = text[trailer_at:]
-
+        body, trailer = _split_body_and_trailer(text)
         if not body:
             return cls(records=(), trailer=trailer)
 
-        first = _HEADER_AT_START.match(body)
-        if not first:
-            raise CadFormatError("first component record does not start after CADe_SIMU header")
-
-        records: list[CadRecord] = []
         current_start = 0
-        current_index = int(first.group(1))
-        current_type = int(first.group(2))
         separator_before = ""
+        records: list[CadRecord] = []
 
-        while True:
-            if current_type == 8:
-                next_match = cls._next_after_text(body, current_start)
-                if next_match is None:
-                    next_start = len(body)
-                    next_separator = ""
-                else:
-                    next_start = next_match.start()
-                    next_separator = ""
-            else:
-                next_match = _HEADER_AFTER_SEPARATOR.search(body, first.end())
-                if next_match is None:
-                    next_start = len(body)
-                    next_separator = ""
-                else:
-                    next_start = next_match.start()
-                    next_separator = "#"
+        while current_start < len(body):
+            header = _require_header(body, current_start)
+            index = int(header.group(1))
+            type_code = int(header.group(2))
+            boundary = _next_boundary(body, current_start, type_code, header.end())
+            raw_end = boundary.raw_end if boundary else len(body)
 
-            raw = body[current_start:next_start]
             records.append(
                 CadRecord(
-                    index=current_index,
-                    type_code=current_type,
-                    raw=raw,
+                    index=index,
+                    type_code=type_code,
+                    raw=body[current_start:raw_end],
                     separator_before=separator_before,
                 )
             )
 
-            if next_match is None:
+            if boundary is None:
                 break
-
-            if next_separator == "#":
-                header_start = next_match.start() + 1
-                current_index = int(next_match.group(1))
-                current_type = int(next_match.group(2))
-            else:
-                header_start = next_match.start()
-                current_index = int(next_match.group(1))
-                current_type = int(next_match.group(2))
-
-            current_start = header_start
-            separator_before = next_separator
-            first = _HEADER_AT_START.match(body, current_start)
-            if first is None:
-                raise CadFormatError("malformed component record header")
+            current_start = boundary.header_start
+            separator_before = boundary.separator
 
         return cls(records=tuple(records), trailer=trailer)
-
-    @staticmethod
-    def _next_after_text(body: str, record_start: int) -> re.Match[str] | None:
-        """Locate the record immediately following a type-8 free-text object."""
-        header = _HEADER_AT_START.match(body, record_start)
-        if header is None:
-            return None
-
-        numeric_start = body.find("*", header.end())
-        if numeric_start < 0:
-            return None
-        payload_start = body.find("#", numeric_start)
-        if payload_start < 0:
-            return None
-        return _HEADER_WITHOUT_SEPARATOR.search(body, payload_start + 1)
 
     def dumps(self) -> str:
         body = "".join(record.separator_before + record.raw for record in self.records)
