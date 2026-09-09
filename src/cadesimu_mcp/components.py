@@ -8,6 +8,8 @@ TYPE_CODES: dict[int, str] = {
     8: "free_text_label",
     1000: "three_phase_motor",
     2001: "three_pole_contactor",
+    3000: "control_supply_phase",
+    3001: "control_supply_neutral",
     3004: "three_phase_supply",
     3011: "supply_or_terminal_variant",
     4000: "wire_segment",
