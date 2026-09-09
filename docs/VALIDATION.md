@@ -30,15 +30,19 @@ The combined direct-starter file opened and rendered QF1 auxiliary, FR1 auxiliar
 
 Expected behaviour:
 
-1. Press START S1.
-2. KM1 coil energizes.
-3. KM1 main power contacts close and M1 is supplied.
-4. KM1 auxiliary 13-14 closes and maintains the coil after START is released.
-5. Press STOP S0.
-6. KM1 coil de-energizes, the self-hold opens and the motor power contacts open.
-7. Triggering the overload contact must also interrupt the control path.
+1. Press START S1 with a normal click only; do not drag the mouse.
+2. S1 must return to its rest/open state when the click is released.
+3. KM1 coil energizes.
+4. KM1 main power contacts close and M1 is supplied.
+5. KM1 auxiliary 13-14 closes and maintains the coil after S1 returns to rest.
+6. Press STOP S0 with a normal click only; do not drag the mouse.
+7. KM1 coil de-energizes, the self-hold opens and the motor power contacts open.
+8. Releasing S0 must not restart the motor.
+9. Triggering the overload contact must also interrupt the control path.
 
-Do not mark the direct-starter generator fully validated until Gate D passes in CADe_SIMU.
+Important CADe_SIMU interaction detail: dragging the mouse while holding a momentary pushbutton intentionally leaves that pushbutton actuated. That is useful for tests but invalidates the START/STOP self-hold check because START can remain artificially closed. If this happens, reset the simulation or return the pushbutton to its rest state before retesting.
+
+Do not mark the direct-starter generator fully validated until Gate D passes in CADe_SIMU with momentary START/STOP operation.
 
 ### Gate E — PE/earth — PENDING
 
