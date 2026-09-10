@@ -10,6 +10,7 @@ Unit tests can prove that the generator is internally consistent, but CADe_SIMU 
 - self-hold topology record checks
 - CADe_SIMU control-device scan-order check
 - annotation placement checks
+- single-phase L/N/PE component and conductor checks
 - `compileall`
 - Ruff in CI
 
@@ -63,3 +64,22 @@ Generate and validate the protective-earth connection to the motor PE terminal w
 ### Gate F — graphical leader lines — PENDING
 
 Identify CADe_SIMU's non-electrical drawing-line record from a controlled sample before generating callout lines. Never use electrical wire record `4000` for this purpose.
+
+### Gate G — protected single-phase lighting — PENDING MANUAL TEST
+
+Candidate generator implemented for the classroom circuit:
+
+`L/N/PE -> Q1 IGA -> F differential -> Q2 branch breaker -> S1 NO -> H1 lamp`.
+
+The implementation uses observed CADe_SIMU records from known lighting examples: type `3011` for L/N/PE supply, `6005` for the two-pole differential, `6008` for a two-pole magnetothermic breaker, `8008` for a maintained NO switch, `9008` for the lamp, and conductor variants `4018` phase, `4009` neutral and `4010` PE.
+
+Manual test:
+
+1. Open `circuito_monofasico_iga_id_luz.cad` in CADe_SIMU.
+2. Confirm the supply and all five devices render in the intended vertical order.
+3. Start simulation and close Q1, F and Q2.
+4. Toggle S1 closed: H1 must illuminate.
+5. Toggle S1 open: H1 must turn off.
+6. Opening Q1, F or Q2 must remove power from H1.
+
+Do not mark Gate G as passed until all six checks succeed in the target CADe_SIMU version.
