@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .layout import ControlLayout, PowerLayout
-from .model import Annotation, DirectStarterSpec, PowerCircuitSpec
+from .layout import ControlLayout, PowerLayout, SinglePhaseLightingLayout
+from .model import Annotation, DirectStarterSpec, PowerCircuitSpec, SinglePhaseLightingSpec
 
 
 def power_annotations(spec: PowerCircuitSpec, layout: PowerLayout) -> tuple[Annotation, ...]:
@@ -54,4 +54,30 @@ def direct_starter_annotations(
             control_right,
             control.coil_y + 5,
         ),
+    )
+
+
+def single_phase_lighting_annotations(
+    spec: SinglePhaseLightingSpec,
+    layout: SinglePhaseLightingLayout,
+) -> tuple[Annotation, ...]:
+    """Aligned teaching labels for the protected single-phase lamp circuit."""
+    label_x = layout.x + 34
+    return (
+        Annotation("CIRCUITO MONOFASICO BASICO", layout.x - 18, layout.source_y - 18),
+        Annotation("ACOMETIDA (ALIM) - L N PE", label_x, layout.source_y + 1),
+        Annotation(f"{spec.main_breaker} - INT MAG (IGA)", label_x, layout.main_breaker_y + 8),
+        Annotation(
+            f"{spec.residual_device} - INT DIFERENCIAL (ID)",
+            label_x,
+            layout.residual_device_y + 7,
+        ),
+        Annotation(
+            f"{spec.branch_breaker} - INT MAGN (INT AUTOMATICO)",
+            label_x,
+            layout.branch_breaker_y + 8,
+        ),
+        Annotation(f"{spec.switch} 13-14 - INTERRUPTOR (NA)", label_x, layout.switch_y + 5),
+        Annotation(f"{spec.lamp} X1-X2 - BOMBILLA", label_x, layout.lamp_y + 5),
+        Annotation("PE - tierra de proteccion", label_x, layout.source_y + 10),
     )
