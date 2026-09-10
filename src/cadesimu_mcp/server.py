@@ -7,7 +7,9 @@ from .components import TYPE_CODES, type_name
 from .generator import (
     DirectStarterSpec,
     PowerCircuitSpec,
+    SinglePhaseLightingSpec,
     build_direct_starter_with_control,
+    build_single_phase_lighting_circuit,
     build_three_phase_power_circuit,
 )
 from .validation import VALIDATION_STATUS
@@ -115,6 +117,36 @@ def generate_direct_starter_with_control(
             if not VALIDATION_STATUS.control_simulation_passed
             else "Control simulation is validated."
         ),
+    }
+
+
+@mcp.tool()
+def generate_single_phase_lighting_circuit(
+    main_breaker: str = "Q1",
+    residual_device: str = "F",
+    branch_breaker: str = "Q2",
+    switch: str = "S1",
+    lamp: str = "H1",
+    title: str = "Auralis Monofasico",
+    include_explanations: bool = True,
+) -> dict[str, object]:
+    """Generate L/N/PE + IGA + differential + breaker + switch + lamp."""
+    cad_text = build_single_phase_lighting_circuit(
+        SinglePhaseLightingSpec(
+            main_breaker=main_breaker,
+            residual_device=residual_device,
+            branch_breaker=branch_breaker,
+            switch=switch,
+            lamp=lamp,
+            title=title,
+            include_explanations=include_explanations,
+        )
+    )
+    return {
+        "validated_in_cadesimu": False,
+        "record_count": len(CadDocument.parse(cad_text).records),
+        "cad_text": cad_text,
+        "next_step": "Open the generated .cad in CADe_SIMU and test Q1, F, Q2, S1 and H1.",
     }
 
 
