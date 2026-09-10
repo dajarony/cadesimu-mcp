@@ -36,3 +36,16 @@ class DirectStarterSpec:
     start_button: str = "S1"
     title: str = "Auralis Direct Starter"
     include_explanations: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class SinglePhaseLightingSpec:
+    """Names and presentation options for a protected single-phase lamp circuit."""
+
+    main_breaker: str = "Q1"
+    residual_device: str = "F"
+    branch_breaker: str = "Q2"
+    switch: str = "S1"
+    lamp: str = "H1"
+    title: str = "Auralis Monofasico"
+    include_explanations: bool = True
