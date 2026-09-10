@@ -90,3 +90,49 @@ class ControlLayout:
     @property
     def hold_join_y(self) -> int:
         return self.coil_y - 3
+
+
+@dataclass(frozen=True, slots=True)
+class SinglePhaseLightingLayout:
+    """Coordinates for a vertical L/N/PE protection and lamp circuit."""
+
+    x: int = 90
+    source_y: int = 45
+    main_breaker_y: int = 54
+    residual_device_y: int = 81
+    branch_breaker_y: int = 105
+    switch_y: int = 138
+    lamp_y: int = 159
+    pole_spacing: int = 6
+
+    @property
+    def phase_x(self) -> int:
+        return self.x
+
+    @property
+    def neutral_x(self) -> int:
+        return self.x + self.pole_spacing
+
+    @property
+    def pe_x(self) -> int:
+        return self.x + 2 * self.pole_spacing
+
+    @property
+    def main_breaker_bottom_y(self) -> int:
+        return self.main_breaker_y + 21
+
+    @property
+    def residual_device_bottom_y(self) -> int:
+        return self.residual_device_y + 18
+
+    @property
+    def branch_breaker_bottom_y(self) -> int:
+        return self.branch_breaker_y + 21
+
+    @property
+    def switch_bottom_y(self) -> int:
+        return self.switch_y + 12
+
+    @property
+    def lamp_bottom_y(self) -> int:
+        return self.lamp_y + 12
