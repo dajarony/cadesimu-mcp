@@ -8,6 +8,7 @@ from .generator import (
     DirectStarterSpec,
     PowerCircuitSpec,
     SinglePhaseLightingSpec,
+    build_direct_starter_reference_clone,
     build_direct_starter_with_control,
     build_single_phase_lighting_circuit,
     build_three_phase_power_circuit,
@@ -95,7 +96,7 @@ def generate_direct_starter_with_control(
     title: str = "Auralis Direct Starter",
     include_explanations: bool = True,
 ) -> dict[str, object]:
-    """Generate power + STOP/START control + KM1 self-hold."""
+    """Generate power + STOP/START control + KM1 self-hold synthetically."""
     cad_text = build_direct_starter_with_control(
         DirectStarterSpec(
             protection=protection,
@@ -117,6 +118,35 @@ def generate_direct_starter_with_control(
             if not VALIDATION_STATUS.control_simulation_passed
             else "Control simulation is validated."
         ),
+    }
+
+
+@mcp.tool()
+def generate_direct_starter_reference_clone(
+    protection: str = "QF1",
+    contactor: str = "KM1",
+    overload: str = "FR1",
+    motor: str = "M1",
+    stop_button: str = "S0",
+    start_button: str = "S1",
+) -> dict[str, object]:
+    """Clone a canonical working starter without regenerating network metadata."""
+    cad_text = build_direct_starter_reference_clone(
+        DirectStarterSpec(
+            protection=protection,
+            contactor=contactor,
+            overload=overload,
+            motor=motor,
+            stop_button=stop_button,
+            start_button=start_button,
+            include_explanations=False,
+        )
+    )
+    return {
+        "reference_preserving": True,
+        "record_count": len(CadDocument.parse(cad_text).records),
+        "cad_text": cad_text,
+        "next_step": "Open in CADe_SIMU and test one momentary START, then STOP.",
     }
 
 
