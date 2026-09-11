@@ -18,5 +18,6 @@ def test_expected_mcp_tools_are_registered() -> None:
         "validation_status",
         "generate_three_phase_power_circuit",
         "generate_direct_starter_with_control",
+        "generate_direct_starter_reference_clone",
         "generate_single_phase_lighting_circuit",
     } <= names
