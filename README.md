@@ -1,5 +1,7 @@
 # cadesimu-mcp
 
+> **For coding agents:** read [`AGENTS.md`](AGENTS.md) before changing this project. It contains the current validation truth, the simulation/connectivity discovery, architecture rules and the exact next gate.
+
 A small, testable **CADe_SIMU `.cad` parser, circuit generator and MCP server**.
 
 The project reverse-engineers only the parts of the CADe_SIMU text format that have been observed and validated. Unknown fields are preserved instead of guessed.
